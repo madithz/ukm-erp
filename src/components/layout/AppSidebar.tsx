@@ -35,7 +35,7 @@ export function AppSidebar() {
           </div>
           {!collapsed && (
             <span className="font-semibold text-foreground tracking-tight">
-              TextileERP
+              UKM ERP
             </span>
           )}
         </div>
