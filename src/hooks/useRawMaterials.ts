@@ -87,3 +87,32 @@ export function useUpdateRawMaterialQuantity() {
     },
   });
 }
+
+export function useDeleteRawMaterial() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("raw_materials")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["raw_materials"] });
+      toast({
+        title: "Success",
+        description: "Raw material deleted successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}

@@ -1,3 +1,5 @@
+import { Trash2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
 import {
   Table,
   TableBody,
@@ -6,11 +8,23 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { useFinishedGoods } from "@/hooks/useFinishedGoods";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useFinishedGoods, useDeleteFinishedGood } from "@/hooks/useFinishedGoods";
 import { format } from "date-fns";
 
 export function FinishedGoodsTab() {
   const { data: goods, isLoading } = useFinishedGoods();
+  const deleteGood = useDeleteFinishedGood();
 
   return (
     <div className="space-y-4">
@@ -29,18 +43,19 @@ export function FinishedGoodsTab() {
               <TableHead>Type</TableHead>
               <TableHead>Quantity</TableHead>
               <TableHead>Last Updated</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8">
+                <TableCell colSpan={5} className="text-center py-8">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : goods?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                   No finished goods yet. Record production to add products.
                 </TableCell>
               </TableRow>
@@ -56,6 +71,32 @@ export function FinishedGoodsTab() {
                   <TableCell>{good.quantity} pcs</TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(good.updated_at), "dd MMM yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Product</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{good.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteGood.mutate(good.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))

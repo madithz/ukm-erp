@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus } from "lucide-react";
+import { Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -25,12 +25,24 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { useRawMaterials, useCreateRawMaterial } from "@/hooks/useRawMaterials";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { useRawMaterials, useCreateRawMaterial, useDeleteRawMaterial } from "@/hooks/useRawMaterials";
 import { format } from "date-fns";
 
 export function RawMaterialsTab() {
   const { data: materials, isLoading } = useRawMaterials();
   const createMaterial = useCreateRawMaterial();
+  const deleteMaterial = useDeleteRawMaterial();
   const [open, setOpen] = useState(false);
 
   const [form, setForm] = useState({
@@ -171,18 +183,19 @@ export function RawMaterialsTab() {
               <TableHead>Size Category</TableHead>
               <TableHead>Stock</TableHead>
               <TableHead>Added</TableHead>
+              <TableHead className="w-[50px]"></TableHead>
             </TableRow>
           </TableHeader>
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8">
+                <TableCell colSpan={6} className="text-center py-8">
                   Loading...
                 </TableCell>
               </TableRow>
             ) : materials?.length === 0 ? (
               <TableRow>
-                <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                   No raw materials yet. Add your first material above.
                 </TableCell>
               </TableRow>
@@ -197,6 +210,32 @@ export function RawMaterialsTab() {
                   </TableCell>
                   <TableCell className="text-muted-foreground">
                     {format(new Date(material.created_at), "dd MMM yyyy")}
+                  </TableCell>
+                  <TableCell>
+                    <AlertDialog>
+                      <AlertDialogTrigger asChild>
+                        <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
+                      </AlertDialogTrigger>
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle>Delete Material</AlertDialogTitle>
+                          <AlertDialogDescription>
+                            Are you sure you want to delete "{material.name}"? This action cannot be undone.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter>
+                          <AlertDialogCancel>Cancel</AlertDialogCancel>
+                          <AlertDialogAction
+                            onClick={() => deleteMaterial.mutate(material.id)}
+                            className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                          >
+                            Delete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
                   </TableCell>
                 </TableRow>
               ))
