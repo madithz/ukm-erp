@@ -92,3 +92,34 @@ export function useDeleteFinishedGood() {
     },
   });
 }
+
+export function useUpdateFinishedGood() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      name, 
+      product_type, 
+      quantity 
+    }: { 
+      id: string; 
+      name: string; 
+      product_type: "Pashmina" | "Kerudung"; 
+      quantity: number;
+    }) => {
+      const { data, error } = await supabase
+        .from("finished_goods")
+        .update({ name, product_type, quantity })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finished_goods"] });
+    },
+  });
+}

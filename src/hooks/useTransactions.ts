@@ -66,6 +66,52 @@ export function useCreateTransaction() {
   });
 }
 
+export function useUpdateTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      date, 
+      description, 
+      category, 
+      type, 
+      amount 
+    }: { 
+      id: string; 
+      date: string; 
+      description: string; 
+      category: "Operational" | "Sales" | "Purchase"; 
+      type: "In" | "Out"; 
+      amount: number;
+    }) => {
+      const { data, error } = await supabase
+        .from("transactions")
+        .update({ date, description, category, type, amount })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["transactions"] });
+      toast({
+        title: "Success",
+        description: "Transaction updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useDeleteTransaction() {
   const queryClient = useQueryClient();
 
