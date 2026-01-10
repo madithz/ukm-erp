@@ -74,3 +74,21 @@ export function useUpsertFinishedGood() {
     },
   });
 }
+
+export function useDeleteFinishedGood() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const { error } = await supabase
+        .from("finished_goods")
+        .delete()
+        .eq("id", id);
+
+      if (error) throw error;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["finished_goods"] });
+    },
+  });
+}
