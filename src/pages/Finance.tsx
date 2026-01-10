@@ -1,5 +1,5 @@
 import { useState, useMemo } from "react";
-import { Plus, ArrowUpRight, ArrowDownRight, Trash2 } from "lucide-react";
+import { Plus, ArrowUpRight, ArrowDownRight, Trash2, Pencil } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -37,7 +37,7 @@ import {
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useTransactions, useCreateTransaction, useDeleteTransaction, useCashBalance } from "@/hooks/useTransactions";
+import { useTransactions, useCreateTransaction, useDeleteTransaction, useUpdateTransaction, useCashBalance, Transaction } from "@/hooks/useTransactions";
 import { format } from "date-fns";
 import { cn } from "@/lib/utils";
 
@@ -45,11 +45,22 @@ export default function Finance() {
   const { data: transactions, isLoading } = useTransactions();
   const createTransaction = useCreateTransaction();
   const deleteTransaction = useDeleteTransaction();
+  const updateTransaction = useUpdateTransaction();
   const balance = useCashBalance();
   const [open, setOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
   const [form, setForm] = useState({
     date: format(new Date(), "yyyy-MM-dd"),
+    description: "",
+    category: "Operational" as "Operational" | "Sales" | "Purchase",
+    type: "In" as "In" | "Out",
+    amount: "",
+  });
+
+  const [editForm, setEditForm] = useState({
+    date: "",
     description: "",
     category: "Operational" as "Operational" | "Sales" | "Purchase",
     type: "In" as "In" | "Out",
@@ -70,6 +81,31 @@ export default function Finance() {
       amount: "",
     });
     setOpen(false);
+  };
+
+  const handleEdit = (transaction: Transaction) => {
+    setEditingTransaction(transaction);
+    setEditForm({
+      date: transaction.date,
+      description: transaction.description,
+      category: transaction.category,
+      type: transaction.type,
+      amount: String(transaction.amount),
+    });
+    setEditOpen(true);
+  };
+
+  const handleEditSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingTransaction) return;
+    
+    await updateTransaction.mutateAsync({
+      id: editingTransaction.id,
+      ...editForm,
+      amount: parseFloat(editForm.amount),
+    });
+    setEditOpen(false);
+    setEditingTransaction(null);
   };
 
   const formatCurrency = (value: number) => {
@@ -241,21 +277,115 @@ export default function Finance() {
           </Dialog>
         </div>
 
+        {/* Edit Dialog */}
+        <Dialog open={editOpen} onOpenChange={setEditOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Edit Transaction</DialogTitle>
+            </DialogHeader>
+            <form onSubmit={handleEditSubmit} className="space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="edit-date">Date</Label>
+                <Input
+                  id="edit-date"
+                  type="date"
+                  value={editForm.date}
+                  onChange={(e) => setEditForm({ ...editForm, date: e.target.value })}
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-description">Description</Label>
+                <Input
+                  id="edit-description"
+                  value={editForm.description}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, description: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label>Category</Label>
+                  <Select
+                    value={editForm.category}
+                    onValueChange={(value: "Operational" | "Sales" | "Purchase") =>
+                      setEditForm({ ...editForm, category: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="Operational">Operational</SelectItem>
+                      <SelectItem value="Sales">Sales</SelectItem>
+                      <SelectItem value="Purchase">Purchase</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Type</Label>
+                  <Select
+                    value={editForm.type}
+                    onValueChange={(value: "In" | "Out") =>
+                      setEditForm({ ...editForm, type: value })
+                    }
+                  >
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="In">Cash In</SelectItem>
+                      <SelectItem value="Out">Cash Out</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="edit-amount">Amount (IDR)</Label>
+                <Input
+                  id="edit-amount"
+                  type="number"
+                  min="0"
+                  step="1000"
+                  value={editForm.amount}
+                  onChange={(e) =>
+                    setEditForm({ ...editForm, amount: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              <Button
+                type="submit"
+                className="w-full"
+                disabled={updateTransaction.isPending}
+              >
+                {updateTransaction.isPending ? "Saving..." : "Save Changes"}
+              </Button>
+            </form>
+          </DialogContent>
+        </Dialog>
+
         <div className="rounded-lg border bg-card">
           <Table>
             <TableHeader>
               <TableRow>
-              <TableHead>Date</TableHead>
+                <TableHead>Date</TableHead>
                 <TableHead>Description</TableHead>
                 <TableHead>Category</TableHead>
                 <TableHead>Type</TableHead>
                 <TableHead className="text-right">Amount</TableHead>
                 <TableHead className="text-right">Balance</TableHead>
-                <TableHead className="w-[50px]"></TableHead>
+                <TableHead className="w-[80px]"></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
-            {isLoading ? (
+              {isLoading ? (
                 <TableRow>
                   <TableCell colSpan={7} className="text-center py-8">
                     Loading...
@@ -313,30 +443,40 @@ export default function Finance() {
                       {formatCurrency(transaction.runningBalance)}
                     </TableCell>
                     <TableCell>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent>
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Are you sure you want to delete this transaction? This action cannot be undone.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Cancel</AlertDialogCancel>
-                            <AlertDialogAction
-                              onClick={() => deleteTransaction.mutate(transaction.id)}
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
-                            >
-                              Delete
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
+                      <div className="flex items-center gap-1">
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="h-8 w-8 text-muted-foreground hover:text-foreground"
+                          onClick={() => handleEdit(transaction)}
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </Button>
+                        <AlertDialog>
+                          <AlertDialogTrigger asChild>
+                            <Button variant="ghost" size="icon" className="h-8 w-8 text-muted-foreground hover:text-destructive">
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </AlertDialogTrigger>
+                          <AlertDialogContent>
+                            <AlertDialogHeader>
+                              <AlertDialogTitle>Delete Transaction</AlertDialogTitle>
+                              <AlertDialogDescription>
+                                Are you sure you want to delete this transaction? This action cannot be undone.
+                              </AlertDialogDescription>
+                            </AlertDialogHeader>
+                            <AlertDialogFooter>
+                              <AlertDialogCancel>Cancel</AlertDialogCancel>
+                              <AlertDialogAction
+                                onClick={() => deleteTransaction.mutate(transaction.id)}
+                                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              >
+                                Delete
+                              </AlertDialogAction>
+                            </AlertDialogFooter>
+                          </AlertDialogContent>
+                        </AlertDialog>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

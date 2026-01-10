@@ -88,6 +88,52 @@ export function useUpdateRawMaterialQuantity() {
   });
 }
 
+export function useUpdateRawMaterial() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ 
+      id, 
+      name, 
+      color, 
+      size_category, 
+      unit, 
+      quantity 
+    }: { 
+      id: string; 
+      name: string; 
+      color: string; 
+      size_category: string; 
+      unit: "Meter" | "Yard"; 
+      quantity: number;
+    }) => {
+      const { data, error } = await supabase
+        .from("raw_materials")
+        .update({ name, color, size_category, unit, quantity })
+        .eq("id", id)
+        .select()
+        .single();
+
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["raw_materials"] });
+      toast({
+        title: "Success",
+        description: "Raw material updated successfully",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+}
+
 export function useDeleteRawMaterial() {
   const queryClient = useQueryClient();
 
